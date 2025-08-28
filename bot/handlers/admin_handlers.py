@@ -1,9 +1,10 @@
 import asyncio
+import sqlite3
 import os
 
 from .imports import *
 from bot.bot_instance import bot
-import sqlite3
+from AI_agent.AI_agent import *
 
 admin_router = Router()
 
@@ -20,6 +21,9 @@ async def poll(message: types.Message):
     cursor = connection.cursor()
 
     while True:
+        creating_db() # Вызов функции для создания базы данных
+        generate_and_save_quiz() # Вызов функции для генерации квиза и записи его в базу данных
+
         cursor.execute("SELECT id, question, options, right_answer FROM PRONOUNS LIMIT 1")
         row = cursor.fetchone()
         if not row:
@@ -47,4 +51,4 @@ async def poll(message: types.Message):
         except Exception as e:
             print(e)
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(60*60*12)

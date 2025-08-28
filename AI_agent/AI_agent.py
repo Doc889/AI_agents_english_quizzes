@@ -5,8 +5,7 @@ from dotenv import load_dotenv
 from langchain_gigachat import GigaChat
 from langchain.prompts import ChatPromptTemplate
 
-from propmts import *
-
+from .propmts import *
 
 load_dotenv()
 
@@ -22,8 +21,14 @@ db_updater = GigaChat(
     verify_ssl_certs=False
 )
 
-def creating_db() -> None: # Функция для создания таблицы в базе данных
-    connection = sqlite3.connect('../db/english.db')
+db_path = os.path.join(os.path.dirname(__file__), "..", "db", "english.db")
+db_path = os.path.abspath(db_path)
+
+
+def creating_db() -> None:  # Функция для создания таблицы в базе данных
+    global db_path
+
+    connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 
     if not os.path.exists('../db/english.db'):
@@ -39,8 +44,10 @@ def creating_db() -> None: # Функция для создания таблиц
         connection.close()
 
 
-def insert_quiz_to_db_tool(data: str): # Функция для записи квиза в базу данных
-    connection = sqlite3.connect('../db/english.db')
+def insert_quiz_to_db_tool(data: str):  # Функция для записи квиза в базу данных
+    global db_path
+
+    connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 
     try:
@@ -67,7 +74,7 @@ def insert_quiz_to_db_tool(data: str): # Функция для записи кв
         return f"❌ Ошибка: {e}"
 
 
-def check_quiz(quiz: str): # Функция для проверка квиза на корректность
+def check_quiz(quiz: str):  # Функция для проверка квиза на корректность
     prompt_template_for_update = ChatPromptTemplate.from_messages(messages)
     prompt_for_update_with_quiz = prompt_template_for_update.invoke({"quiz": quiz})
     response = db_updater.invoke(prompt_for_update_with_quiz)
@@ -75,20 +82,18 @@ def check_quiz(quiz: str): # Функция для проверка квиза �
     return response.content
 
 
-def generate_and_save_quiz(): # Функция, которая объединяет работу двух ИИ-агентов
-    connection = sqlite3.connect('../db/english.db')
+def generate_and_save_quiz():  # Функция, которая объединяет работу двух ИИ-агентов
+    global db_path
+
+    connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 
     cursor.execute("SELECT COUNT(*) FROM PRONOUNS")
     count = cursor.fetchone()[0]
-    if count <= 5: # Проверка на количество квизов, записанных в базу данных
+    if count <= 5:  # Проверка на количество квизов, записанных в базу данных
         response = tasks_generator.invoke(prompt_for_generation)
         quiz = response.content.strip().strip("'").strip('"')
         print("Сгенерировано:", quiz)
 
-        if check_quiz(quiz) == 'ВЕРНО': # Вызываем функцию записи квиза в базу данных
+        if check_quiz(quiz) == 'ВЕРНО':  # Вызываем функцию записи квиза в базу данных
             insert_quiz_to_db_tool(quiz)
-
-
-if __name__ == "__main__":
-    generate_and_save_quiz()
